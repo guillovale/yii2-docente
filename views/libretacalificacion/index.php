@@ -36,11 +36,15 @@ $pdf = 'uploads/'.$idcurso.'.'.'pdf';
     <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
 
     <p>
-        <?= Html::a('Crear Calificación', ['notasdetalle/create', 'idcarr'=>$idcarr, 'idasig'=>$idasig,
+        <? Html::a('Crear Calificación', ['notasdetalle/create', 'idcarr'=>$idcarr, 'idasig'=>$idasig,
 								'nivel'=>$nivel, 
 								'paralelo'=>$paralelo, 
 								'idper'=> $idper, 'idcurso'=> $idcurso], 
 											['class' => 'btn btn-primary']) ?>
+												
+		<?= Html::a('Crear Calificación', ['notasdetalle/creamasivo', 'idcurso'=> $idcurso], 
+											['class' => 'btn btn-primary']) ?>
+											
 	<?php if ($nivel == 0) {
 		echo Html::a('Ver Calificaciones', ['consolidado', 'idcurso'=> $idcurso], 
 											['class' => 'btn btn-warning']);} 

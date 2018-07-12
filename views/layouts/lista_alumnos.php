@@ -15,8 +15,6 @@
 			#use yii\widgets\DetailView;
 			use yii\data\ActiveDataProvider;
 			use yii\helpers\Html;
-		$pdf = 'uploads/'.$this->params['idcurso'].'.'.'pdf';
-		echo Html::a($this->params['silabo'], [$pdf]);
 	?>
 	<div style="font-size:11px;">
 		<h4 style="color:blue;">Horario</h4>

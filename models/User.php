@@ -77,7 +77,8 @@ class User extends \yii\db\ActiveRecord implements \yii\web\IdentityInterface
 		        ->where(["LoginUsu" => $username, "StatusPer" => 1
 		        ])
 		        ->one();
-		if (!count($dbUser)) {
+		#echo var_dump($dbUser); exit;
+		if (!$dbUser) {
 			return null;
 		}
 		

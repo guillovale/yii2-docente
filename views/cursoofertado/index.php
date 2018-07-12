@@ -65,7 +65,7 @@ $docente =  $this->params['docente'];
             // 'restringido',
 
             ['class' => 'yii\grid\ActionColumn',
-				'template' => '{view} {silabo}',
+				'template' => '{view}',
 
 				'buttons' => [
 				    'silabo' => function ($url, $model) {

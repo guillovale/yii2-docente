@@ -452,6 +452,166 @@ class NotasdetalleController extends Controller
 	
     }
 
+	public function actionCreamasivo($idcurso)
+    {
+		$usuario = Yii::$app->user->identity;
+		$grabar = 0;
+		$sigla = [];
+		$fecha = date('Y-m-d');
+		$hemisemestre = [];
+		$modelcurso = $this->findCurso($idcurso);
+		$extdmodel = ExtensionDocente::find()
+				->where(['idcurso' => $idcurso])
+				->andwhere(['<=','fecha_inicio', $fecha])
+				->andwhere(['>=','fecha_fin', $fecha])
+				->one();
+		#$idperiodo = $modelcurso?$modelcurso->idper:0;
+		$periodo = Periodolectivo::find()
+			->where(['StatusPerLec' => 1])
+			->one();
+		
+		if ($usuario && $modelcurso && $periodo) {
+			$hoy  = date('Y-m-d');
+			$carrera = isset($modelcurso->detallemalla->malla->carrera->idCarr)?
+					$modelcurso->detallemalla->malla->carrera->idCarr:'';
+		
+			$tipo_ingreso = isset($modelcurso->detallemalla->malla->detalle)?
+						$modelcurso->detallemalla->malla->detalle:'';
+
+			$carreraop = isset($modelcurso->detallemalla->malla->carrera->optativa)?
+						$modelcurso->detallemalla->malla->carrera->optativa:0;
+
+			if ($modelcurso->fecha_fin >= $hoy) {
+				if ( ('SNNA' == substr($tipo_ingreso, 0, 4)) && $hoy >= $periodo->finiciohemi1 ) {
+					$sigla = ['N','M'];
+					$hemisemestre = [0];
+					$grabar = 1;
+				}			
+
+				elseif ($hoy >= $periodo->finiciohemi1 && $hoy <= $periodo->ffinhemi1) {
+					$sigla = ['A','B','C','X','T'];
+					$grabar = 1;
+					$hemisemestre = [1];
+				}
+				# elseif ($hoy >= $periodo->finiciohemi2 && $hoy <= $periodo->ffinhemi2) {
+				elseif ($hoy >= $periodo->finiciohemi2 && $hoy <= $periodo->ffinhemi2) {
+					$sigla = ['A','B','C','X','T'];
+					$grabar = 1;
+					$hemisemestre = [2];
+				}
+				elseif ($hoy >= $periodo->examsupletorio_ini && $hoy <= $periodo->examsupletorio_fin) {
+					$grabar = 1;
+					$hemisemestre = [0];
+					$sigla = ['R'];	
+				}
+				#elseif ($carreraop == 1) {
+				#	$hemisemestre = [1=>1, 2=>2, 0=>0];
+				#	$sigla = ['A','B','C','X','T', 'R'];
+				#	$grabar = 1;
+				#}
+				if ($carreraop == 1 ) {
+					$hemisemestre = [1, 2, 0];
+					$sigla = ['A','B','C','X','T', 'R'];
+					$grabar = 1;
+				}
+			}
+		}
+		
+		
+
+		if ($usuario && $modelcurso && !$extdmodel) {
+			if ('SNNA' == substr($tipo_ingreso, 0, 4)) {
+				$sigla = ['N','M'];
+				$hemisemestre = [0];
+				$grabar = 1;
+			}
+			else {	
+				$hemisemestre = [1, 2, 0];
+				$sigla = ['A','B','C','X','T', 'R'];
+				$grabar = 1;
+			}
+		}
+
+		#if ($carrera == '056' || $carrera == '197' ) {
+		#	$grabar = 0;
+		#}
+		#&& $publicar == 0
+		#echo var_dump($sigla); exit;
+		
+		if ($grabar == 1 && $usuario && $modelcurso) {
+
+			$detallematricula = DetalleMatricula::find()
+							->select('id')
+							->where(['idcurso'=>$idcurso])
+							->all();
+		
+			if ($detallematricula){
+				foreach ($hemisemestre as $hemi) {
+					foreach ($sigla as $sig) {
+						
+						$idcomponente = Componentescalificacion::find()
+							->select('idcomponente')
+							->leftJoin('parametroscalificacion', 'parametroscalificacion.idparametro = 
+										componentescalificacion.idparametro')
+							->where(['parametroscalificacion.sigla'=>$sig])
+							->one();
+						
+						if (!$idcomponente) {
+							return $this->redirect(Yii::$app->request->referrer);
+						}
+						
+						$libreta = LibretaCalificacion::find()
+									->leftJoin('componentescalificacion', 'componentescalificacion.idcomponente = 
+										libreta_calificacion.idcomponente')
+									->leftJoin('parametroscalificacion', 'parametroscalificacion.idparametro = 
+										componentescalificacion.idparametro')
+									->where(['idcurso'=> $modelcurso->id, 'hemisemestre' => $hemi,
+										'parametroscalificacion.sigla' => $sig])
+									->one();
+						#if ($sig == 'B') {echo var_dump($libreta); exit;}
+						#if ($sigla == 'B') {echo var_dump($libreta, $idcomponente); exit;}
+						if ( !$libreta && (  ($hemi == 1 || $hemi == 2) && $sig != 'R'  || ( $hemi == 0 && $sig == 'R')  )  {
+																
+							#if ($sig == 'R') {
+							#	echo var_dump($sig, $libreta, $idcomponente); 
+							#	exit;
+							# }
+							$libretaModel = new LibretaCalificacion();
+							$cedula = $usuario->CIInfPer;
+							$libretaModel['iddocente'] = $cedula;
+							$libretaModel['fecha'] = date("Y-m-d H:i:s");
+							$libretaModel['idper'] = $modelcurso->idper;
+							$libretaModel['idcurso'] = $modelcurso->id;
+							$libretaModel['hemisemestre'] = $hemi;
+							$libretaModel['idcomponente'] = $idcomponente->idcomponente;
+							#$libretaModel['iddocenteperasig'] = null;
+							#$libretaModel['idparametro'] = null;
+							if ( !$libretaModel->save() ) {
+								return $this->redirect(Yii::$app->request->referrer);
+							}
+							$idlibreta = $libretaModel->id;
+							$peso = round($libretaModel->componente0->idParam->escala /100, 3);
+							foreach ($detallematricula as $detalle) {
+								$nota = new NotasDetalle();
+								$nota->idlibreta = $idlibreta;
+								$nota->iddetallematricula = $detalle->id;
+								$nota->fecha_crea = date("Y-m-d H:i:s");
+								$nota->nota = 0;
+								$nota->peso = $peso;
+								$nota->save();
+							}
+						}
+					}
+				}
+				
+				return Yii::$app->response->redirect(['libretacalificacion/index', 'idcurso'=> $idcurso]);
+			}
+		}
+		
+		return $this->redirect(Yii::$app->request->referrer);	
+	
+    }
+
 	public function actionCreaasistencia($idcurso)
     {
 		$grabar = 0;

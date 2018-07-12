@@ -84,10 +84,11 @@ class SiteController extends Controller
 			$hoy = date('Y-m-d H:i:s');
 			if ($usuario) {
 				$email = $usuario->mailInst;
-				$texto = 'Estimado docente: Usted ha ingresado correctamente al Sistema Académico UTELVT , 
+				$texto = 'Estimado docente con cédula: '. $usuario->CIInfPer. 
+						', Usted ha ingresado correctamente al Sistema Académico UTELVT , 
 						fecha: '.$hoy. 
 						' en caso no haya sido usted, por favor comuníquese con nosotros en forma inmediata!';
-				$this->enviarMail($email, $texto);
+				#$this->enviarMail($email, $texto);
 				
 			}
             return $this->goBack();
